@@ -1,0 +1,7 @@
+.idea
+.nextflow
+.nextflow.log*
+/input
+/results
+/trash
+/work
