@@ -1,7 +1,13 @@
 .idea
+.vscode
 .nextflow
 .nextflow.log*
-/input
-/results
-/trash
-/work
+
+input
+results
+work
+
+*.csv
+*.tar.gz
+nextflow.config
+reference.json*
