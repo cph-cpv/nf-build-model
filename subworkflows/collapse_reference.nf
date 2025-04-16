@@ -1,13 +1,18 @@
-#!/usr/bin/env nextflow
-
-
+include {decompress} from "../modules/decompress.nf" 
 
 workflow collapse_reference {
+    take:
+    reference_json_path
+
+    main:
     def finish_py = file("finish.py")
     def organize_sequences_py = file("organize_sequences.py")
     def repair_py = file("repair.py")
 
-    repaired_reference_path = repairReference(file("input/reference.json"), repair_py)
+    repaired_reference_path = repairReference(
+        reference_json_path,
+        repair_py
+    )
 
     otu_paths = organizeSequences(repaired_reference_path, organize_sequences_py) | flatten
 
@@ -18,7 +23,10 @@ workflow collapse_reference {
         | clusterWithCdhit
         | collect
 
-    finish(cluster_paths, repaired_reference_path, finish_py)
+    collapsed = finish(cluster_paths, repaired_reference_path, finish_py)
+
+    emit:
+    collapsed.out
 }
 
 process repairReference {
@@ -82,9 +90,7 @@ process finish {
     path finish_py
 
     output:
-    path "reps.fa"
-    path "reps_by_sequence.csv"
-    path "summary.txt"
+    tuple path("reps.fa"), path("reps_by_sequence.csv"), path("summary.txt")
 
     script:
     """
