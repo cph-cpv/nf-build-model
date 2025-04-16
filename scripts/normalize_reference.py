@@ -4,7 +4,7 @@ from collections import Counter, defaultdict
 
 sample_data = defaultdict(set)
 
-with open("cleaned.csv") as f:
+with open("data/cleaned.csv") as f:
     reader = csv.reader(f)    
 
     for row in reader:
@@ -15,14 +15,14 @@ with open("cleaned.csv") as f:
 
 sorted_sample_ids = sorted(sample_data.keys())
 
-with open("reference.json") as f:
+with open("test_folder/reference.json") as f:
     reference_json = json.load(f)
 
 
 seen_acronyms = set()
 
 
-with open("nucleotide_info.csv", "w") as f_ni, open("labels.csv", "w") as f_l:
+with open("scripts/output/nucleotide_info.csv", "w") as f_ni, open("scripts/output/labels.csv", "w") as f_l:
     nucleotide_info = csv.writer(f_ni)
     nucleotide_info.writerow(
         [
