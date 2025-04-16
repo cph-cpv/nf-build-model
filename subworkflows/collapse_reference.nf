@@ -2,7 +2,7 @@
 
 
 
-workflow {
+workflow collapse_reference {
     def finish_py = file("finish.py")
     def organize_sequences_py = file("organize_sequences.py")
     def repair_py = file("repair.py")
@@ -74,8 +74,6 @@ process clusterWithCdhit {
 
 
 process finish {
-    debug true
-
     publishDir "results"
 
     input:

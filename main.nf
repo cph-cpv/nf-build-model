@@ -1,7 +1,6 @@
 // Default parameter input
 include { decompressHostFasta; buildHostBowtieIndex; runHostMapping; featureExtractDataFrame } from './nextflow/build_unreliable.nf'
-
-
+include { collapse_reference } from './subworkflows/collapse_reference.nf'
 
 
 reference_json = file("input/reference.json.gz")
@@ -80,8 +79,6 @@ process runMapping {
     bowtie2 -x ${bowtie_index_path[0].baseName.replaceAll(/\.\d+/, '')} -p 15 -a -U ${row[1]} | samtools view -bS > ${row[0]}.bam
     """ 
 }
-
-
 
 workflow {
   // build unreliable_regions
