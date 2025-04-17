@@ -1,47 +1,51 @@
-segment_reference = file("scripts/segment_reference.py")
-nucleotide_info = file("scripts/output/nucleotide_info.csv")
-rscript_rle_conversion = file("scripts/rle_conversion.r")
+include { buildBowtie2Index } from "../modules/build_index.nf"
+include { decompress } from "../modules/decompress.nf"
 
-process decompressHostFasta {
-    publishDir "results/decompressHost"
-    tag "$y"
 
-    input:
-    path y
+workflow build_unreliable_regions {
+  take:  
+  host_fasta
+  reference_fasta
 
-    output:
-    path 'host_genome.fa'
+  main:
+  def fragment_reference_py = file("../scripts/fragment_reference.py")
 
-    script:
-    """
-    echo $y
-    ls -l 
-    stat $y > stat_${y}
-    gzip -dfc ${y} > host_genome.fa
-    """
+  fragmented = fragment_reference(fragment_reference_py, reference_fasta)
+
+  
+  index = buildBowtie2Index(decompress(host_fasta))
+  mapping = run_mapping(fragmented, index)
+
+  row = Channel
+    .fromPath('data/sample_name_paths_test.csv')
+    .splitCsv()
+
+
+  result = run_mapping(row, reference_index_path)
+
+  rle_files = feature_extract_data_frame(
+    result,
+    reference_json_path,
+    virus_segments,
+    host_mapping
+  )
 }
 
-process buildHostBowtieIndex {
-    publishDir "results/hostIndex"
+process fragment_reference {
+  input:
+  path fragment_reference_py
+  path fasta  
 
-    cpus 6
-    memory '4 GB'
+  output:
+  path "fragmented.fa"
 
-    input:
-    path host_fasta_path
-
-    output:
-    path 'host_genome_index.*.bt2'
-
-    script:
-    """
-    bowtie2-build --threads 6 ${host_fasta_path} host_genome_index
-    """
+  script:
+  """
+  python ${fragment_reference_py} "fragmented.fa"
+  """
 }
 
-process runHostMapping {
-    publishDir "results/hostMapping"
-
+process run_mapping {
     cpus 15
     memory '40 GB'
 
@@ -57,14 +61,11 @@ process runHostMapping {
     script:
     """
     bowtie2 -x ${bowtie_index_path[0].baseName.replaceAll(/\.\d+/, '')} -p 15 -a -f ${virus_segments} | samtools view -bS > virus_segments_mapping.bam
-    
-    ls -l
-
     samtools sort virus_segments_mapping.bam -o virus_segment_mapping.sorted.bam
     """ 
 }
 
-process featureExtractDataFrame{
+process feature_extract_data_frame{
   publishDir "results/rle_data"
 
   cpus 2
@@ -87,3 +88,4 @@ process featureExtractDataFrame{
   Rscript ${rscript_rle_conversion} ${fileName.baseName} ${reference_json_path} ${virus_segments} ${host_mapping} ${nucleotide_info}
   """
 }
+

@@ -1,6 +1,6 @@
-from pathlib import Path
-import sys
+"""Scan a given path for files with specific extensions."""
 
+from pathlib import Path
 
 for stem in ("illumina", "rott"):
     for extension in ("fastq", "fq"):
