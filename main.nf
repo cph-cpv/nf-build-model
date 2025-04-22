@@ -14,6 +14,8 @@ workflow {
 
   collapsed = collapse_reference(reference)
 
+  nucelotide_info = extract_nucleotide_info(collapsed)
+
   unreliable_regions = build_unreliable_regions(collapsed)
 
   sample_mapping = map_samples(row, collapsed_index)
@@ -26,6 +28,22 @@ workflow {
     virus_segments,
     host_mapping
   )
+}
+
+process extract_nucleotide_info {
+  publishDir "results/nucleotide_info"
+
+  input:
+  path reference_json_path
+
+  output:
+  path "nucleotide_info.csv"
+
+  script:
+  """
+  python3 scripts/extract_sequence_info.py ${reference_json_path}
+  """
+
 }
 
 process run_mapping {
