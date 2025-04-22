@@ -31,17 +31,17 @@ workflow {
 }
 
 process extract_nucleotide_info {
-  publishDir "results/nucleotideInfo"
+  publishDir "results/nucleotide_info"
 
   input:
   path reference_json_path
 
   output:
-  path "nuceotide_info.csv"
+  path "nucleotide_info.csv"
 
   script:
   """
-  python3 scripts/extract_nucleotide_info ${reference_json_path}
+  python3 scripts/extract_sequence_info.py ${reference_json_path}
   """
 
 }

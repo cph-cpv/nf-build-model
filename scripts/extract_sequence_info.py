@@ -9,44 +9,39 @@ with open(reference_path) as f:
     reference_json = json.load(f)
 
 
-with open("scripts/output/nucleotide_info.csv", "w") as f_ni:
-    nucleotide_info = csv.writer(f_ni)
+with open("scripts/output/nucleotide_info.csv", "w") as f:
+    nucleotide_info = csv.writer(f)
     nucleotide_info.writerow(
         [
+            "sequence_id",
+            "virus_acronym",
+            "virus_id",
             "virus_name",
-            "abbr",
-            "name",
-            "iso_id",
-            "seg_id",
-            "A_percent",
-            "C_percent",
-            "T_percent",
-            "GC_percent",
-            "seg_len",
+            "isolate_id",
+            "a_percent",
+            "c_percent",
+            "t_percent",
+            "gc_percent",
+            "length",
         ]
     )
-
+    
     for otu in reference_json["otus"]:
-        otu_id = otu["_id"]
-        name = otu["name"].lower()
 
         for isolate in otu["isolates"]:
             isolate_id = isolate["id"]
 
             for sequence in isolate["sequences"]:
-                sequence_id = sequence["_id"]
-
                 counter = Counter(sequence["sequence"].lower())
 
-                a_percent = counter["a"] / counter.total()
-
                 nucleotide_info.writerow(
-                    [
-                        otu_id,
-                        name,
+                    [   
+                        sequence["_id"],
+                        otu["abbreviation"]
+                        otu["_id"],
+                        otu["name"].lower(),
                         isolate_id,
-                        sequence_id,
-                        a_percent,
+                        counter["a"] / counter.total(),
                         counter["c"] / counter.total(),
                         counter["t"] / counter.total(),
                         (counter["g"] + counter["c"]) / counter.total(),
