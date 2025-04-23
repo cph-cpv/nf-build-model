@@ -1,35 +1,38 @@
-include {decompress} from "../modules/decompress.nf" 
+include { decompress } from "../modules/decompress.nf"
 
 workflow collapse_reference {
     take:
     reference_json_path
 
     main:
-    def finish_py = file("finish.py")
-    def organize_sequences_py = file("organize_sequences.py")
-    def repair_py = file("repair.py")
+    def finish_py = file("scripts/finish.py")
+    def organize_sequences_py = file("scripts/organize_sequences.py")
+    def repair_py = file("scripts/repair.py")
 
-    repaired_reference_path = repairReference(
+    repaired_reference_path = repair_reference(
         reference_json_path,
-        repair_py
+        repair_py,
     )
 
-    otu_paths = organizeSequences(repaired_reference_path, organize_sequences_py) | flatten
+    otu_paths = organize_sequences(repaired_reference_path, organize_sequences_py) | flatten
 
     cluster_paths = otu_paths
         | flatMap { p ->
             p.listFiles().collect { fp -> tuple(p.baseName, fp) }
         }
-        | clusterWithCdhit
+        | cluster_with_cdhit
         | collect
 
     collapsed = finish(cluster_paths, repaired_reference_path, finish_py)
 
     emit:
-    collapsed.out
+    collapsed
 }
 
-process repairReference {
+process repair_reference {
+    cpus 1
+    memory "5 GB"
+
     input:
     path reference
     path repair_py
@@ -44,7 +47,7 @@ process repairReference {
     """
 }
 
-process organizeSequences {
+process organize_sequences {
     cpus 1
     memory "200 MB"
 
@@ -61,7 +64,7 @@ process organizeSequences {
     """
 }
 
-process clusterWithCdhit {
+process cluster_with_cdhit {
     cache "lenient"
     cpus 3
     memory "12 GB"
@@ -82,7 +85,9 @@ process clusterWithCdhit {
 
 
 process finish {
-    publishDir "results"
+    cpus 1
+    memory "5 GB"
+    publishDir "results/collapse_reference"
 
     input:
     path cluster_path

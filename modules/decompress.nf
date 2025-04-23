@@ -3,14 +3,14 @@ process decompress {
     path y
 
     output:
-    path y.baseName
+    path { y.name.replace('.gz', '') }
 
     script:
     """
+    export OUTPUT_NAME="${y.name.replace('.gz', '')}"
+
     if [[ ${y} == *.gz ]]; then
-        gzip -d ${y}
-    else
-        cp ${y} ${y.baseName}
+        gzip -df ${y} > \$OUTPUT_NAME
     fi
     """
 }

@@ -1,11 +1,20 @@
 import csv
 from typing import Iterator
+from types import SimpleNamespace
 from pprint import pprint
 from pathlib import Path
 import sys
 import json
 
 reference_path = sys.argv[1]
+
+
+class CollapseCounts(SimpleNamespace):
+    collapsed_isolates = 0
+    reference_isolates = 0
+    collapsed_sequences = 0
+    reference_sequences = 0
+    representative_sequences = 0
 
 
 def parse_clstr(path: Path) -> Iterator[dict]:
@@ -67,137 +76,106 @@ def parse_clusters(path: Path):
     return _reps_by_sequence_id
 
 
-reps_by_sequence_id = parse_clusters(Path.cwd())
+def write_reps_by_sequence_id(reps_by_sequence_id_: dict[str, str]):
+    with open("reps_by_sequence.csv", "w") as f:
+        writer = csv.writer(f)
+        writer.writerow(["sequence_id", "representative_id"])
+
+        for sequence_id, representative_id in reps_by_sequence_id_.items():
+            writer.writerow([sequence_id, representative_id])
 
 
-all_edges = set()
+def write_reps(reference_: dict, reps_by_sequence_id_: dict[str, str]):
+    written_sequence_ids = set()
 
-clustered_isolate_count = 0
-reference_isolate_count = 0
+    with open("reps.fa", "w") as f:
+        for otu in reference_["otus"]:
+            for isolate in otu["isolates"]:
+                for sequence in isolate["sequences"]:
+                    sequence_id = sequence["_id"]
 
-reference_segment_count = 0
+                    if (
+                        sequence_id in written_sequence_ids
+                        or sequence_id in reps_by_sequence_id_
+                    ):
+                        continue
 
-clustered_sequence_count = len(reps_by_sequence_id)
-reference_sequence_count = 0
-representative_sequence_count = len(set(reps_by_sequence_id.values()))
-
-reference_minimum_sequence_length = -1
-
-
-with open(reference_path) as f:
-    reference = json.load(f)
-
-
-for otu in reference["otus"]:
-    otu_id = otu["_id"]
-
-    collapsed_isolates = []
-
-    sequences_by_id = {
-        sequence["_id"]: sequence
-        for isolate in otu["isolates"]
-        for sequence in isolate["sequences"]
-    }
-
-    reference_segment_count += len(otu["schema"])
-    required_segments = {s["name"] for s in otu["schema"] if s["required"]}
-
-    for isolate in otu["isolates"]:
-        reference_isolate_count += 1
-
-        reference_sequence_count += len(isolate["sequences"])
-
-        reference_minimum_sequence_length = min(
-            reference_minimum_sequence_length,
-            min(len(sequence["sequence"]) for sequence in isolate["sequences"]),
-        )
-
-        edges = tuple(
-            reps_by_sequence_id.get(sequence["_id"], sequence["_id"])
-            for sequence in isolate["sequences"]
-        )
-
-        if edges in all_edges:
-            continue
-
-        all_edges.add(edges)
-
-        sequences_by_segment = {
-            sequences_by_id[sequence_id]["segment"]: sequences_by_id[sequence_id][
-                "sequence"
-            ]
-            for sequence_id in edges
-        }
-
-        for sequence in isolate["sequences"]:
-            segment_name = sequence["segment"]
-
-            try:
-                sequence["sequence"] = sequences_by_segment[segment_name]
-            except KeyError as e:
-                if segment_name in required_segments:
-                    raise KeyError(
-                        f"Missing required segment {segment_name} in sequences_by_segment for isolate {isolate['id']}"
-                    ) from e
-
-        collapsed_isolates.append(isolate)
-
-    clustered_isolate_count += len(collapsed_isolates)
-
-    otu["isolates"] = collapsed_isolates
+                    f.write(f">{sequence_id}\n{sequence['sequence']}\n")
+                    written_sequence_ids.add(sequence_id)
 
 
-with open("reps_by_sequence.csv", "w") as f:
-    writer = csv.writer(f)
-    writer.writerow(["sequence_id", "representative_id"])
+def load_reference(
+    path: Path, counts: CollapseCounts, reps_by_sequence_id_: dict[str, str]
+) -> dict:
+    with open(path) as f:
+        reference = json.load(f)
 
-    for sequence_id, representative_id in reps_by_sequence_id.items():
-        writer.writerow([sequence_id, representative_id])
+    all_edges = set()
+    reference_minimum_sequence_length = -1
 
-
-written_rep_ids = set()
-
-
-with open("reps.fa", "w") as f:
     for otu in reference["otus"]:
+        collapsed_isolates = []
+
         for isolate in otu["isolates"]:
-            for sequence in isolate["sequences"]:
-                sequence_id = sequence["_id"]
+            counts.reference_isolates += 1
+            counts.reference_sequences += len(isolate["sequences"])
 
-                representative_id = reps_by_sequence_id.get(sequence_id)
+            reference_minimum_sequence_length = min(
+                reference_minimum_sequence_length,
+                min(len(sequence["sequence"]) for sequence in isolate["sequences"]),
+            )
 
-                if representative_id in written_rep_ids:
-                    continue
+            edges = tuple(
+                reps_by_sequence_id_.get(sequence["_id"], sequence["_id"])
+                for sequence in isolate["sequences"]
+            )
 
-                written_rep_ids.add(representative_id)
+            if edges in all_edges:
+                continue
 
-                f.write(f">{representative_id}\n{sequence['sequence']}\n")
+            all_edges.add(edges)
+            collapsed_isolates.append(isolate)
+
+        counts.collapsed_isolates += len(collapsed_isolates)
+        otu["isolates"] = collapsed_isolates
+
+    return reference
 
 
-with open("collapsed.json", "w") as f:
-    json.dump(reference, f)
+if __name__ == "__main__":
+    counts = CollapseCounts()
 
+    reps_by_sequence_id = parse_clusters(Path.cwd())
 
-with open("summary.txt", "w") as f:
-    f.write("Summary of clustering results:\n")
-    f.write("==============================\n\n")
+    counts.collapsed_sequences = len(reps_by_sequence_id)
+    counts.representative_sequences = len(set(reps_by_sequence_id.values()))
 
-    f.write("Isolates:\n")
-    f.write("---------\n\n")
+    reference = load_reference(Path(reference_path), counts, reps_by_sequence_id)
+    write_reps_by_sequence_id(reps_by_sequence_id)
+    write_reps(reference, reps_by_sequence_id)
 
-    f.write(f"Input:     {reference_isolate_count}\n")
-    f.write(f"Collapsed: {clustered_isolate_count}\n\n")
+    with open("collapsed.json", "w") as f:
+        json.dump(reference, f)
 
-    f.write("Sequences:\n")
-    f.write("----------\n\n")
+    with open("summary.txt", "w") as f:
+        f.write("Summary of clustering results:\n")
+        f.write("==============================\n\n")
 
-    f.write(f"Input:     {reference_sequence_count}\n")
-    f.write(f"Collapsed: {clustered_sequence_count}\n")
-    f.write(f"Reps:      {representative_sequence_count}\n\n")
+        f.write("Isolates:\n")
+        f.write("---------\n\n")
 
-    f.write("Other:\n")
-    f.write("------\n\n")
+        f.write(f"Input:     {counts.reference_isolates}\n")
+        f.write(f"Collapsed: {counts.collapsed_isolates}\n\n")
 
-    f.write(f"Total OTU count:         {len(reference['otus'])}\n")
-    f.write(f"Total segment count:     {reference_segment_count}\n")
-    f.write(f"Minimum sequence length: {reference_minimum_sequence_length}\n\n")
+        f.write("Sequences:\n")
+        f.write("----------\n\n")
+
+        f.write(f"Input:     {counts.reference_sequences}\n")
+        f.write(f"Collapsed: {counts.collapsed_sequences}\n")
+        f.write(f"Reps:      {counts.representative_sequences}\n\n")
+
+        f.write("Other:\n")
+        f.write("------\n\n")
+
+        f.write(f"Total OTU count:         {len(reference['otus'])}\n")
+        # f.write(f"Minimum sequence length: {reference_minimum_sequence_length}\n\n")
