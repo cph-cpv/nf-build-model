@@ -1,4 +1,4 @@
-process buildBowtie2Index {
+process build_bowtie2_index {
     cpus 4
     memory '8 GB'
 

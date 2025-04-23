@@ -1,50 +1,25 @@
-include { buildBowtie2Index } from './modules/build_index.nf'
-include { decompress } from "./modules/decompress.nf"
+include { build_bowtie2_index } from './modules/build_index.nf'
+include { decompress as decompress_host } from "./modules/decompress.nf"
+include { decompress as decompress_reference } from "./modules/decompress.nf"
 
-include { build_unreliable_regions } from './subworkflows/build_unreliable.nf' 
+include { find_unreliable_regions } from './subworkflows/find_unreliable_regions.nf'
 include { collapse_reference } from './subworkflows/collapse_reference.nf'
 include { map_samples } from './subworkflows/map_samples.nf'
 
-params.reference = "input/reference.json.gz"
-params.samples_csv = "input/samples.csv"
+params.host = "input/arabidopsis_thaliana.fa.gz"
+params.reference = "input/reference.json"
+params.samples = "input/samples/*"
 
 workflow {
-  def reference = decompress(file(params.reference))
-  def samples = file(params.samples_path)
+  def host = decompress_host(file(params.host))
+  def reference = decompress_reference(file(params.reference))
+  def samples = file(params.samples)
 
   collapsed = collapse_reference(reference)
+  collapsed_fasta = collapsed | map { it[0] }
 
-  unreliable_regions = build_unreliable_regions(collapsed)
+  collapsed_fasta | view
 
-  sample_mapping = map_samples(row, collapsed_index)
-
-  rle_samples = Channel.from(result)
-
-  rle_files = featureExtractDataFrame(
-    result,
-    reference_json_path,
-    virus_segments,
-    host_mapping
-  )
+  find_unreliable_regions(host, collapsed_fasta)
+  map_samples(collapsed_fasta, samples)
 }
-
-process run_mapping {
-    publishDir "results/mapping"
-
-    cpus 15
-    memory '40 GB'
-
-    input:
-    val row
-    path bowtie_index_path
-
-    output:
-    path "${row[0]}.bam"
-
-
-    script:
-    """
-    bowtie2 -x ${bowtie_index_path[0].baseName.replaceAll(/\.\d+/, '')} -p 15 -a -U ${row[1]} | samtools view -bS > ${row[0]}.bam
-    """ 
-}
-

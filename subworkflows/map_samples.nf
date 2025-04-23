@@ -1,40 +1,48 @@
-include { buildBowtie2Index} from "../modules/build_index.nf"
+include { build_bowtie2_index } from "../modules/build_index.nf"
 
 workflow map_samples {
     take:
-    collapsed_fasta
+    fasta
     samples
 
     main:
-    collapsed_index = buildBowtie2Index(collapsed_fasta)
-    mapping = run_mapping(samples, collapsed_index)
+    index = build_bowtie2_index(fasta)
 
-    row = Channel
-        .fromPath("data/sample_name_paths_test.csv")
-        .splitCsv()
-
-    mapping = run_mapping(row, collapsed_index)
-
-    emit:
-    mapping.out
+    combined = Channel.from(samples) | combine(index) | run_sample_mapping 
+    sorted = combined | sort_sample_mapping
 }
 
-process run_mapping {
-    publishDir "results/mapping"
 
+process run_sample_mapping {
+    cpus 15
+    debug true
+    publishDir "results/mapping"
+    memory '40 GB'
+
+    input:
+    path files
+
+    output:
+    path "mapped.sam"
+
+    script:
+    """
+    bowtie2 -x ${files[1].baseName.replaceAll(/\.\d+/, '')} -p 15 -a -U ${files[0]} -S mapped.sam
+    """
+}
+
+process sort_sample_mapping {
     cpus 15
     memory '40 GB'
 
     input:
-    val row
-    path bowtie_index_path
+    path sam
 
     output:
-    path "${row[0]}.bam"
-
+    path "mapped.bam"
 
     script:
     """
-    bowtie2 -x ${bowtie_index_path[0].baseName.replaceAll(/\.\d+/, '')} -p 15 -a -U ${row[1]} | samtools view -bS > ${row[0]}.bam
-    """ 
+    samtools view --threads 15 -b ${sam} > mapped.bam
+    """
 }
