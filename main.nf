@@ -18,8 +18,44 @@ workflow {
   collapsed = collapse_reference(reference)
   collapsed_fasta = collapsed | map { it[0] }
 
-  collapsed_fasta | view
-
+  extract_nucleotide_info(collapsed_fasta)
   find_unreliable_regions(host, collapsed_fasta)
   map_samples(collapsed_fasta, samples)
 }
+
+process extract_nucleotide_info {
+  publishDir "results/nucleotide_info"
+
+  input:
+  path reference_json_path
+
+  output:
+  path "nucleotide_info.csv"
+
+  script:
+  """
+  python3 scripts/extract_sequence_info.py ${reference_json_path}
+  """
+
+}
+
+process run_mapping {
+    publishDir "results/mapping"
+
+    cpus 15
+    memory '40 GB'
+
+    input:
+    val row
+    path bowtie_index_path
+
+    output:
+    path "${row[0]}.bam"
+
+
+    script:
+    """
+    bowtie2 -x ${bowtie_index_path[0].baseName.replaceAll(/\.\d+/, '')} -p 15 -a -U ${row[1]} | samtools view -bS > ${row[0]}.bam
+    """ 
+}
+
