@@ -1,10 +1,10 @@
 import csv
-from typing import Iterator
-from types import SimpleNamespace
-from pprint import pprint
-from pathlib import Path
-import sys
 import json
+import sys
+from pathlib import Path
+from pprint import pprint
+from types import SimpleNamespace
+from typing import Iterator
 
 reference_path = sys.argv[1]
 
@@ -31,8 +31,10 @@ def parse_clstr(path: Path) -> Iterator[dict]:
                     "id": line[1:].strip(),
                     "members": [],
                 }
-
             else:
+                if cluster is None:
+                    raise ValueError("Unexpected line in clstr file")
+                
                 sequence_id = line.split(">")[1].split("...")[0]
                 cluster["members"].append(sequence_id)
 
