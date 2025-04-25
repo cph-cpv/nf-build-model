@@ -47,7 +47,10 @@ if __name__ == "__main__":
     names = parse_sample_names(Path.cwd() / "input/sample_labels.csv")
     paths = find_fastq_paths(Path("/mnt/raw"), ["illumina", "rott"])
 
-    for path in (Path.cwd() / "input" / "samples").iterdir():
+    samples_path = (Path.cwd() / "input" / "samples")
+    samples_path.mkdir(parents=True, exist_ok=True)
+
+    for path in samples_path.iterdir():
         if path.is_symlink():
             path.unlink()
     
@@ -59,7 +62,6 @@ if __name__ == "__main__":
         ])
 
         try:
-
             path = specific_paths[0]
         except IndexError:
             print(f"Warning: No path found for sample name {name}.")
