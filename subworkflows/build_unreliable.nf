@@ -23,7 +23,7 @@ workflow build_unreliable_regions {
 
   result = run_mapping(row, reference_index_path)
 
-  gc_unreliable = find_gc_unreliable_regions(reference_fasta)
+  
 
 
   rle_files = feature_extract_data_frame(
@@ -69,21 +69,7 @@ process run_mapping {
 }
 
 
-process find_gc_unreliable_regions{
-  publishDir "results/gc_unreliable"
 
-  input:
-  path reference_fasta
-
-  output: 
-  path "gc_unreliable.csv"
-
-  script:
-  """
-    Rscript scripts/build_gc_unreliable.r ${reference_fasta} gc_unreliable.csv
-  """
-
-}
 
 process feature_extract_data_frame{
   publishDir "results/rle_data"

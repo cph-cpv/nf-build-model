@@ -11,30 +11,35 @@ params.reference = "input/reference.json"
 params.samples = "input/samples/*"
 
 workflow {
+  def extract_sequence_info_py = file("scripts/extract_sequence_info.py")
+
   def host = decompress_host(file(params.host))
   def reference = decompress_reference(file(params.reference))
   def samples = file(params.samples)
+  
 
   collapsed = collapse_reference(reference)
   collapsed_fasta = collapsed | map { it[0] }
 
-  extract_nucleotide_info(collapsed_fasta)
+  sequence_info = extract_sequence_info(collapsed_fasta, extract_sequence_info_py)
   find_unreliable_regions(host, collapsed_fasta)
   map_samples(collapsed_fasta, samples)
 }
 
-process extract_nucleotide_info {
-  publishDir "results/nucleotide_info"
+process extract_sequence_info {
+  conda 'env.yaml'
+  publishDir "results/sequence_info"
 
   input:
   path reference_json_path
+  path extract_sequence_info_py
 
   output:
-  path "nucleotide_info.csv"
+  path "sequence_info.csv"
 
   script:
   """
-  python3 scripts/extract_sequence_info.py ${reference_json_path}
+  python3 ${extract_sequence_info_py} ${reference_json_path} sequence_info.csv
   """
 
 }
