@@ -50,18 +50,10 @@ def associate(labels: list[dict[str, str]], sample_paths: list[Path]) -> None:
         )
 
         sys.exit(1)
-
-    non_unique_sample_names = [
-        (sample_name, paths) for sample_name, paths in seen.items() if len(paths) > 1
-    ]
-
-    for sample_name,paths in non_unique_sample_names:
-        for path in paths:
-            if path.name in SAMPLE_NAME_SPREADS.get(sample_name, []):
-                seen[sample_name].remove(path)
-                seen[sample_name].add(path.with_name(path.name.replace("_R1_001", "_R2_001")))
     
-    if non_unique_sample_names:
+    if non_unique_sample_names:=[
+        (sample_name, paths) for sample_name, paths in seen.items() if len(paths) > 1
+    ]:
         print(
             "Found non-specific sample names. Update your sample labels to be more specific to "
             "your sample FASTQ files.\n"
