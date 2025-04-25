@@ -1,0 +1,8 @@
+[tool.pyright]
+exclude = [
+    ".nextflow",
+    ".vscode",
+    "input",
+    "work",
+    "results"
+]

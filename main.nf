@@ -8,12 +8,19 @@ include { map_samples } from './subworkflows/map_samples.nf'
 
 params.host = "input/arabidopsis_thaliana.fa.gz"
 params.reference = "input/reference.json"
+params.labels = "input/sample_labels.csv"
 params.samples = "input/samples/*"
 
 workflow {
   def host = decompress_host(file(params.host))
+  def labels = file(params.labels)
   def reference = decompress_reference(file(params.reference))
   def samples = file(params.samples)
+  def samples_dir_path = samples[0].parent
+
+  def associate_sample_labels_py = file("scripts/associate_sample_labels.py")
+
+  associate_sample_labels(associate_sample_labels_py, labels, samples_dir_path)
 
   collapsed = collapse_reference(reference)
   collapsed_fasta = collapsed | map { it[0] }
@@ -36,26 +43,27 @@ process extract_nucleotide_info {
   """
   python3 scripts/extract_sequence_info.py ${reference_json_path}
   """
-
 }
 
-process run_mapping {
-    publishDir "results/mapping"
+/**
+  * Associate user-provided sample labels with the sample names in the output files.
+  */
+process associate_sample_labels {
+  cpus 1
+  debug true
+  memory "5 GB"
 
-    cpus 15
-    memory '40 GB'
+  input:
+  path associate_sample_labels_py
+  path labels
+  path samples_dir
 
-    input:
-    val row
-    path bowtie_index_path
+  output:
+  path "sample_label_assocations.csv"
 
-    output:
-    path "${row[0]}.bam"
-
-
-    script:
-    """
-    bowtie2 -x ${bowtie_index_path[0].baseName.replaceAll(/\.\d+/, '')} -p 15 -a -U ${row[1]} | samtools view -bS > ${row[0]}.bam
-    """ 
+  script:
+  """
+  ls
+  python3 ${associate_sample_labels_py} ${labels} ${samples_dir} "sample_label_assocations.csv"
+  """
 }
-
