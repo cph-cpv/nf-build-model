@@ -98,7 +98,7 @@ process run_fragment_mapping {
   def index = bowtie_index_path[0].baseName.replaceAll(/\.\d+/, '')
 
   """
-  bowtie2 -x ${index} -p 15 -a -f -U ${fragments} -S mapped.sam
+  bowtie2 -x ${index} -p 15 -f -U ${fragments} -S mapped.sam
   """
 }
 
