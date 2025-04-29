@@ -1,7 +1,7 @@
 import csv
-import json
-from collections import Counter, defaultdict
 import sys
+from collections import Counter
+
 from Bio import SeqIO
 
 reference_fasta_path = sys.argv[1]

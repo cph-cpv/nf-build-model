@@ -1,15 +1,12 @@
-import sys
+import argparse
+from pathlib import Path
+from typing import Iterator
 
 from Bio import SeqIO
 
-input_path = sys.argv[1]
-output_path = sys.argv[2]
 
-
-def _yield_fragments():
+def create_fragments(input_path: Path) -> Iterator[SeqIO.SeqRecord]:
     for record in SeqIO.parse(input_path, "fasta"):
-        print(record.id)
-
         if record.id == "None":
             raise ValueError("Found None record")
 
@@ -21,9 +18,25 @@ def _yield_fragments():
             )
 
 
-with open(output_path, "w") as f:
-    SeqIO.write(
-        _yield_fragments(),
-        f,
-        "fasta",
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Fragment a reference genome into 75bp fragments"
     )
+    parser.add_argument(
+        "input_path",
+        type=str,
+        help="Path to the input reference genome in FASTA format",
+    )
+    parser.add_argument(
+        "output_path",
+        type=str,
+        help="Path to the output file to save the fragments",
+    )
+    args = parser.parse_args()
+
+    with open(args.output_path, "w") as f:
+        SeqIO.write(
+            create_fragments(args.input_path),
+            f,
+            "fasta",
+        )

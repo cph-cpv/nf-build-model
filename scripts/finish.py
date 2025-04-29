@@ -2,7 +2,6 @@ import csv
 import json
 import sys
 from pathlib import Path
-from pprint import pprint
 from types import SimpleNamespace
 from typing import Iterator
 
@@ -34,7 +33,7 @@ def parse_clstr(path: Path) -> Iterator[dict]:
             else:
                 if cluster is None:
                     raise ValueError("Unexpected line in clstr file")
-                
+
                 sequence_id = line.split(">")[1].split("...")[0]
                 cluster["members"].append(sequence_id)
 
@@ -88,22 +87,15 @@ def write_reps_by_sequence_id(reps_by_sequence_id_: dict[str, str]):
 
 
 def write_reps(reference_: dict, reps_by_sequence_id_: dict[str, str]):
-    written_sequence_ids = set()
-
     with open("reps.fa", "w") as f:
         for otu in reference_["otus"]:
             for isolate in otu["isolates"]:
                 for sequence in isolate["sequences"]:
                     sequence_id = sequence["_id"]
+                    representative_id = reps_by_sequence_id_.get(sequence_id)
 
-                    if (
-                        sequence_id in written_sequence_ids
-                        or sequence_id in reps_by_sequence_id_
-                    ):
-                        continue
-
-                    f.write(f">{sequence_id}\n{sequence['sequence']}\n")
-                    written_sequence_ids.add(sequence_id)
+                    if sequence_id == representative_id or representative_id is None:
+                        f.write(f">{sequence_id}\n{sequence['sequence']}\n")
 
 
 def load_reference(
@@ -180,4 +172,3 @@ if __name__ == "__main__":
         f.write("------\n\n")
 
         f.write(f"Total OTU count:         {len(reference['otus'])}\n")
-        # f.write(f"Minimum sequence length: {reference_minimum_sequence_length}\n\n")

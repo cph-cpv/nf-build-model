@@ -1,11 +1,8 @@
 import argparse
 import csv
-import os
-import re
 import sys
 from collections import defaultdict
 from pathlib import Path
-from pprint import pprint
 
 EXCLUDED_SAMPLE_NAMES = [
     "QUADS39-rep2-smRNA_GTAGCC_R2_001.fq.gz",
@@ -126,4 +123,5 @@ if __name__ == "__main__":
 
     labels = parse_sample_labels(args.labels_path)
     sample_paths = get_sample_paths(args.samples_dir_path)
+    
     associate(labels, sample_paths)

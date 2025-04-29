@@ -56,6 +56,7 @@ process associate_sample_labels {
   cpus 1
   debug true
   memory "5 GB"
+  publishDir "results/sample_label_associations"
 
   input:
   path associate_sample_labels_py
