@@ -1,19 +1,28 @@
-import sys
+import argparse
 import csv
 
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Combine unreliable regions from two files.")
 
-with open(sys.argv[1]) as nucleotide_regions_f,  open(sys.argv[2], "r") as mapped_regions_f:
-    
-    mapped_regions = csv.reader(mapped_regions_f)
-    nucleotide_regions = csv.reader(nucleotide_regions_f)
-    next(mapped_regions), next(nucleotide_regions)
+    parser.add_argument("nucleotide_regions", help="Path to the nucleotide regions file.")
+    parser.add_argument("mapped_regions", help="Path to the mapped regions file.")
+    parser.add_argument("output", help="Path to the output file.")
 
-    with open(sys.argv[3], "w") as output_f:
+    args = parser.parse_args()
+
+    with open(args.output, "w") as output_f:
         output = csv.writer(output_f)
-        output.writerow(["sequence_id", "start", "end"])
-        
-        for region in mapped_regions:
-            output.writerow(region)
-        
-        for region in nucleotide_regions:
-            output.writerow(region[0:3])
+        output.writerow(["sequence_id", "start", "end", "category"])
+
+        with open(args.nucleotide_regions) as f:
+            reader = csv.reader(f)
+            next(reader) 
+            output.writerows(([sequence_id,start,end,category] for start,end,sequence_id,category in reader))
+
+        with open(args.mapped_regions) as f:
+            reader = csv.reader(f)
+            next(reader)
+
+            output.writerows(
+                [sequence_id, start, end, "Unmappable regions"] for sequence_id,start,end in reader
+            )

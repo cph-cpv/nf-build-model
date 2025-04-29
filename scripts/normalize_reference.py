@@ -97,6 +97,3 @@ with open("scripts/output/nucleotide_info.csv", "w") as f_ni, open("scripts/outp
                 ]
 
                 labels.writerow([sequence_id, *row])
-
-                if all(value is False for value in row):
-                    print("wrote falsey row")
