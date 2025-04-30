@@ -27,7 +27,7 @@ process run_sample_mapping {
 
     script:
     """
-    bowtie2 -x ${files[1].baseName.replaceAll(/\.\d+/, '')} -p 15 -a -U ${files[0]} -S mapped.sam
+    bowtie2 -x ${files[1].baseName.replaceAll(/\.\d+/, '')} -p 15 -a --no-unal -U ${files[0]} -S mapped.sam
     """
 }
 
