@@ -8,41 +8,29 @@ workflow map_samples {
     main:
     index = build_bowtie2_index(fasta)
 
-    combined = Channel.from(samples) | combine(index) | run_sample_mapping 
-    sorted = combined | sort_sample_mapping
+    Channel.from(samples) | combine(index) | run_sample_mapping
 }
 
 
 process run_sample_mapping {
-    cpus 15
+    cpus 22
     debug true
-    publishDir "results/mapping"
     memory '40 GB'
+    publishDir "results/mapping"
 
     input:
     path files
 
     output:
-    path "mapped.sam"
+    path "*.bam*"
 
     script:
+    def sample_name = files[0].baseName.replaceAll(/(\.fastq|\.fq)(\.gz)?$/, '')
+
     """
-    bowtie2 -x ${files[1].baseName.replaceAll(/\.\d+/, '')} -p 15 -a --no-unal -U ${files[0]} -S mapped.sam
-    """
-}
-
-process sort_sample_mapping {
-    cpus 15
-    memory '40 GB'
-
-    input:
-    path sam
-
-    output:
-    path "mapped.bam"
-
-    script:
-    """
-    samtools view --threads 15 -b ${sam} > mapped.bam
+    bowtie2 -x ${files[1].baseName.replaceAll(/\.\d+/, '')} -p 16 -a -U ${files[0]} \
+    | samtools view -bS - \
+    | samtools sort -@ 4 -m 4G -o ${sample_name}.sorted.bam && samtools index ${sample_name}.sorted.bam
+    echo ${sample_name}
     """
 }
