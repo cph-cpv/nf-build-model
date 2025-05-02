@@ -15,7 +15,6 @@ with open (reference_json_path, "r") as f:
     seq_info = {} # seq_id: {sequence_id: {virus_name, isolate_id},}
 
     for otu in reference["otus"]:
-        seq_info["virus_name"] = otu["name"]
         for isolate in otu["isolates"]:
             for sequence in isolate["sequences"]:
                 seq_info[sequence["_id"]] = {"virus_name": otu["name"], "isolate_id": isolate["id"]}

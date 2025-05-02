@@ -25,7 +25,7 @@ workflow {
   sample_labels = associate_sample_labels(associate_sample_labels_py, labels, samples_dir_path)
 
   def extract_sample_viruses_py = file("scripts/extract_sample_viruses.py")
-  sample_viruses = extract_sample_viruses(extract_sample_viruses_py, sample_labels)
+  sample_viruses = extract_sample_viruses(extract_sample_viruses_py, sample_labels, file(params.reference))
 
   collapsed = collapse_reference(reference)
   collapsed_fasta = collapsed | map { it[0] }
@@ -36,12 +36,6 @@ workflow {
   mapped_samples = map_samples(collapsed_fasta, samples)
 
   mapped_samples_list = mapped_samples[0].collect()
-
-  println(sample_viruses)
-  println(iimi_sequence_info)
-  println(unreliable_regions)
-  println(mapped_samples_list)
-
 
   build_iimi_model_r = file("scripts/build_iimi_model.r")
   model = build_xgb_model(build_iimi_model_r, mapped_samples_list, unreliable_regions, iimi_sequence_info, sample_viruses)
@@ -116,13 +110,14 @@ process extract_sample_viruses {
   input:
   path extract_sample_viruses_py
   path sample_labels
+  path reference
 
   output:
   path "sample_viruses.csv"
 
   script:
   """
-  python3 ${extract_sample_viruses_py} ${sample_labels} "sample_viruses.csv"
+  python3 ${extract_sample_viruses_py} ${sample_labels} ${reference} "sample_viruses.csv"
   """
 }
 
@@ -142,11 +137,6 @@ process build_xgb_model {
 
  script:
  """
- echo ${sample_viruses}
- echo ${iimi_sequence_info}
- echo ${unreliable_regions}
- echo ${mapped_samples}
-
- Rscript ${build_iimi_model_r} ${mapped_samples} ${unreliable_regions} ${iimi_sequence_info} ${sample_viruses}
+ Rscript ${build_iimi_model_r} . ${unreliable_regions} ${iimi_sequence_info} ${sample_viruses}
  """
 }

@@ -8,7 +8,10 @@ workflow map_samples {
     main:
     index = build_bowtie2_index(fasta)
 
-    Channel.from(samples) | combine(index) | run_sample_mapping
+    sample_mappings = Channel.from(samples) | combine(index) | run_sample_mapping
+
+    emit:
+    sample_mappings
 }
 
 
