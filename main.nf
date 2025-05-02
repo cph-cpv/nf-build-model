@@ -13,6 +13,7 @@ params.samples = "input/samples/*"
 
 workflow {
   def extract_sequence_info_py = file("scripts/extract_sequence_info.py")
+  def match_sequence_info_py = file("scripts/match_sequence_info.py")
 
   def host = decompress_host(file(params.host))
   def labels = file(params.labels)
@@ -21,15 +22,31 @@ workflow {
   def samples_dir_path = samples[0].parent
 
   def associate_sample_labels_py = file("scripts/associate_sample_labels.py")
+  sample_labels = associate_sample_labels(associate_sample_labels_py, labels, samples_dir_path)
 
-  associate_sample_labels(associate_sample_labels_py, labels, samples_dir_path)
+  def extract_sample_viruses_py = file("scripts/extract_sample_viruses.py")
+  sample_viruses = extract_sample_viruses(extract_sample_viruses_py, sample_labels)
 
   collapsed = collapse_reference(reference)
   collapsed_fasta = collapsed | map { it[0] }
 
   sequence_info = extract_sequence_info(collapsed_fasta, extract_sequence_info_py)
-  find_unreliable_regions(host, collapsed_fasta)
-  map_samples(collapsed_fasta, samples)
+  iimi_sequence_info = match_sequence_info_with_reference(match_sequence_info_py, sequence_info, file(params.reference))
+  unreliable_regions = find_unreliable_regions(host, collapsed_fasta)
+  mapped_samples = map_samples(collapsed_fasta, samples)
+
+  mapped_samples_list = mapped_samples[0].collect()
+
+  println(sample_viruses)
+  println(iimi_sequence_info)
+  println(unreliable_regions)
+  println(mapped_samples_list)
+
+
+  build_iimi_model_r = file("scripts/build_iimi_model.r")
+  model = build_xgb_model(build_iimi_model_r, mapped_samples_list, unreliable_regions, iimi_sequence_info, sample_viruses)
+  
+ 
 }
 
 process extract_sequence_info {
@@ -49,6 +66,24 @@ process extract_sequence_info {
   """
 }
 
+process match_sequence_info_with_reference {
+  conda 'env.yaml'
+  publishDir "results/iimi_sequence_info"
+
+  input:
+  path match_sequence_info_py
+  path sequence_info
+  path reference_json_path
+
+  output:
+  path "iimi_sequence_info.csv"
+
+  script:
+  """
+  python3 ${match_sequence_info_py} ${sequence_info} ${reference_json_path} iimi_sequence_info.csv
+  """
+}
+
 /**
   * Associate user-provided sample labels with the sample names in the output files.
   */
@@ -57,6 +92,7 @@ process associate_sample_labels {
   debug true
   memory "5 GB"
   publishDir "results/sample_label_associations"
+
 
   input:
   path associate_sample_labels_py
@@ -68,7 +104,49 @@ process associate_sample_labels {
 
   script:
   """
-  ls
   python3 ${associate_sample_labels_py} ${labels} ${samples_dir} "sample_label_assocations.csv"
   """
+}
+
+process extract_sample_viruses {
+  cpus 1
+  memory "5 GB"
+  publishDir "results/sample_viruses"
+
+  input:
+  path extract_sample_viruses_py
+  path sample_labels
+
+  output:
+  path "sample_viruses.csv"
+
+  script:
+  """
+  python3 ${extract_sample_viruses_py} ${sample_labels} "sample_viruses.csv"
+  """
+}
+
+process build_xgb_model {
+ publishDir "results/xgb_model"
+
+ input:
+ path build_iimi_model_r
+ path mapped_samples
+ path unreliable_regions
+ path iimi_sequence_info
+ path sample_viruses
+
+ output:
+ path "trained_xgb.rds"
+
+
+ script:
+ """
+ echo ${sample_viruses}
+ echo ${iimi_sequence_info}
+ echo ${unreliable_regions}
+ echo ${mapped_samples}
+
+ Rscript ${build_iimi_model_r} ${mapped_samples} ${unreliable_regions} ${iimi_sequence_info} ${sample_viruses}
+ """
 }

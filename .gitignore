@@ -12,3 +12,4 @@ work
 *.tar.gz
 nextflow.config
 reference.json*
+scripts/output
