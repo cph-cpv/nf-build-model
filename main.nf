@@ -38,9 +38,7 @@ workflow {
   mapped_samples_list = mapped_samples[0].collect()
 
   build_iimi_model_r = file("scripts/build_iimi_model.r")
-  model = build_xgb_model(build_iimi_model_r, mapped_samples_list, unreliable_regions, iimi_sequence_info, sample_viruses)
-  
- 
+  model = build_xgb_model(build_iimi_model_r, mapped_samples_list, unreliable_regions, iimi_sequence_info, sample_viruses) 
 }
 
 process extract_sequence_info {
@@ -87,7 +85,6 @@ process associate_sample_labels {
   memory "5 GB"
   publishDir "results/sample_label_associations"
 
-
   input:
   path associate_sample_labels_py
   path labels
@@ -133,7 +130,6 @@ process build_xgb_model {
 
  output:
  path "trained_xgb.rds"
-
 
  script:
  """
