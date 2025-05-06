@@ -35,10 +35,13 @@ workflow {
   unreliable_regions = find_unreliable_regions(host, collapsed_fasta)
   mapped_samples = map_samples(collapsed_fasta, samples)
 
-  mapped_samples_list = mapped_samples[0].collect()
+  rle_encode_mappings_r = file("scripts/rle_encode_mapping_data.r")
+  rle_mappings = rle_encode_mappings(rle_encode_mappings_r, mapped_samples[0])
+
+  rle_mappings_list = rle_mappings.collect()
 
   build_iimi_model_r = file("scripts/build_iimi_model.r")
-  model = build_xgb_model(build_iimi_model_r, mapped_samples_list, unreliable_regions, iimi_sequence_info, sample_viruses) 
+  model = build_xgb_model(build_iimi_model_r, rle_mappings_list, unreliable_regions, iimi_sequence_info, sample_viruses) 
 }
 
 process extract_sequence_info {
@@ -118,12 +121,30 @@ process extract_sample_viruses {
   """
 }
 
+process rle_encode_mappings {
+ cpus 1
+ memory "5 GB"
+ publishDir "results/rle"
+
+ input:
+ path rle_encode_mappings_r
+ path bam_file
+ 
+ output:
+ path "rle_${bam_file[0].getBaseName(2)}.rds"
+
+ script:
+ """
+ Rscript ${rle_encode_mappings_r} ${bam_file[0]} .
+ """
+}
+
 process build_xgb_model {
  publishDir "results/xgb_model"
 
  input:
  path build_iimi_model_r
- path mapped_samples
+ path rle_mappings
  path unreliable_regions
  path iimi_sequence_info
  path sample_viruses
