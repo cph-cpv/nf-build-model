@@ -26,6 +26,8 @@ training_data <- lapply(rle_file_paths, function(rle_file_path){
         convert_rle_to_df(rle_data, unreliable_regions, additional_nucleotide_info=nucleotide_info)
     })
 
+training_data <- Filter(function(df) nrow(df) > 0, training_data)
+
 train_x <- bind_rows(training_data)
 
 sample_labels <- fromJSON(sample_labels_path)
