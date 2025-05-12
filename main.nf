@@ -113,11 +113,11 @@ process extract_sample_viruses {
   path reference
 
   output:
-  path "sample_viruses.csv"
+  path "sample_viruses.json"
 
   script:
   """
-  python3 ${extract_sample_viruses_py} ${sample_labels} ${reference} "sample_viruses.csv"
+  python3 ${extract_sample_viruses_py} ${sample_labels} ${reference} "sample_viruses.json"
   """
 }
 

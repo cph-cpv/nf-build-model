@@ -1,6 +1,7 @@
 import json
 import sys
 import csv
+from pathlib import Path
 
 sample_labels_path = sys.argv[1]
 reference_json_path = sys.argv[2]
@@ -26,6 +27,7 @@ with open(sample_labels_path, "r") as sample_labels_f, open(output_path, "w") as
     sample_viruses = {}
    
     for row in sample_labels:
-        sample_viruses.setdefault(row[1], []).extend(virus_segs[row[0]])
+        sample_name = Path(row[2]).stem.split(".")[0]
+        sample_viruses.setdefault(sample_name, []).extend(virus_segs[row[0]])
 
     json.dump(sample_viruses, output_f)
