@@ -153,6 +153,7 @@ process build_xgb_model {
 
   script:
   """
- Rscript ${build_iimi_model_r} . ${unreliable_regions} ${iimi_sequence_info} ${sample_viruses}
- """
+  sed -i '1 s/sequence_id/Virus segment/' ${unreliable_regions}
+  Rscript ${build_iimi_model_r} . ${unreliable_regions} ${iimi_sequence_info} ${sample_viruses}
+  """
 }
