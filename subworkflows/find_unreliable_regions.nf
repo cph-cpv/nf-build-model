@@ -49,7 +49,6 @@ workflow find_unreliable_regions {
 process fragment_reference {
   conda 'env.yaml'
   cpus 1
-  debug true
   memory '500 MB'
   publishDir "results/unreliable_regions"
 
@@ -67,8 +66,6 @@ process fragment_reference {
 }
 
 process check_fragments {
-  debug true
-
   input:
   path fragmented_fasta
   path reference_fasta
@@ -84,7 +81,6 @@ process check_fragments {
 process run_fragment_mapping {
   conda 'env.yaml'
   cpus 16
-  debug true
   memory '32 GB'
 
   input:
@@ -124,7 +120,6 @@ process sort_and_convert_sam {
 process find_mapped_regions {
   conda 'env.yaml'
   cpus 1
-  debug true
   publishDir "results/unreliable_regions"
 
   input:

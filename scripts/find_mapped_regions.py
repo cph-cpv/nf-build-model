@@ -1,5 +1,4 @@
 """The the mapped regions in a BAM file."""
-
 import argparse
 import csv
 from collections import defaultdict
@@ -30,10 +29,12 @@ def find_mapped_regions(bam_path: Path, output_path: Path, minimum_coverage: int
                 sequence_id = split[0]
                 window_start = int(split[1])
 
+
+
                 covered_positions[sequence_id].update(
                     range(
-                        window_start + read.query_alignment_start - 1,
-                        window_start + read.query_alignment_end,
+                        window_start + read.query_alignment_start,
+                        window_start + read.query_alignment_end + 1,
                     )
                 )
 
@@ -43,16 +44,25 @@ def find_mapped_regions(bam_path: Path, output_path: Path, minimum_coverage: int
 
         for sequence_id in covered_positions:
             positions = sorted(covered_positions[sequence_id])
-            start = positions[0]
-            end = positions[0]
 
-            for pos in positions[1:]:
-                if pos == end + 1:
-                    end = pos
+            if len(positions) == 1:
+                writer.writerow([sequence_id, positions[0], positions[0]])
+                continue
+
+            i = 0
+            j = 1
+
+            while j < len(positions):
+                if positions[j] == positions[j - 1] + 1:
+                    j += 1
                 else:
-                    writer.writerow([sequence_id, start, end])
-                    start = pos
-                    end = pos
+                    writer.writerow([sequence_id, positions[i], positions[j - 1]])
+                    i = j
+                    j += 1
+
+            # Handle the final range after the loop
+            if i < len(positions):
+                writer.writerow([sequence_id, positions[i], positions[j - 1]])
 
 
 if __name__ == "__main__":
