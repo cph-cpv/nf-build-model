@@ -24,9 +24,18 @@ Use `cd-hit-est` to cluster 99% similar sequences and produce a FASTA file of cl
 
 #### Outputs
 
+* `collapsed.json`
+
+  A reference JSON file where duplicative isolates have been removed.
+
+  Isolates are considered duplicative if they contain an identical set of representative sequences for their segments that were observeid in another isolate.
+
+  Some sequences do not get included in clusters. In this case, we include them in `reps.fa` and `collapsed.fa` even though they are not technically representative sequences. We
+  still need to determine why these sequences are not included in clusters.
+
 * `reps.fa`
 
-  The cluster sequences of the cluster representatives. The FASTA headers are UUIDs identifying the represenatives.
+  The cluster sequences of the cluster representatives. The FASTA headers are UUIDs identifying the representatives.
 
 * `sequences_to_reps.csv`
 
