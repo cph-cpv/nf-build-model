@@ -40,8 +40,10 @@ workflow {
 
   rle_mappings_list = rle_mappings.collect()
 
+  iimi_unreliable_regions = format_unreliable_regions_for_iimi(unreliable_regions)
+
   build_iimi_model_r = file("scripts/build_iimi_model.r")
-  model = build_xgb_model(build_iimi_model_r, rle_mappings_list, unreliable_regions, iimi_sequence_info, sample_viruses)
+  model = build_xgb_model(build_iimi_model_r, rle_mappings_list, iimi_unreliable_regions, iimi_sequence_info, sample_viruses)
 }
 
 process extract_sequence_info {
@@ -136,6 +138,23 @@ process rle_encode_mappings {
   """
  Rscript ${rle_encode_mappings_r} ${bam_file[0]} .
  """
+}
+
+process format_unreliable_regions_for_iimi {
+  cpus 1
+  memory "5 GB"
+  publishDir "results/iimi_unreliable_regions"
+
+  input:
+  path unreliable_regions
+
+  output:
+  path "iimi_unreliable_regions.csv"
+
+  script:
+  """
+  awk 'NR==1 {print "Virus segment,Start,End,Categories"; next} {print}' ${unreliable_regions} > iimi_unreliable_regions.csv
+  """
 }
 
 process build_xgb_model {
