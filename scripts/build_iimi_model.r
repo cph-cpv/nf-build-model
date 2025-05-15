@@ -16,13 +16,13 @@ nucleotide_info_path <- args[3]
 sample_labels_path <- args[4]
 
 nucleotide_info <- read.csv(nucleotide_info_path, header=TRUE)
-unreliable_regions <- read.csv(unreliable_regions_path, header=TRUE)
+unreliable_regions <- read.csv(unreliable_regions_path, header=TRUE, check.names=FALSE)
 
 all_files_path <- list.files(bam_files_path)
 rle_file_paths <- all_files_path[grep("^rle_.*.rds$", all_files_path)]
 
 training_data <- lapply(rle_file_paths, function(rle_file_path){
-        rle_data <- readRDS(rle_file_path)
+        rle_data <- readRDS(file.path(bam_files_path, rle_file_path))
         convert_rle_to_df(rle_data, unreliable_regions, additional_nucleotide_info=nucleotide_info)
     })
 
